@@ -53,6 +53,8 @@ let mic;
 
 let amp; //variable para cargar la amplitud de la señal de entrada del mic
 
+let fft;
+
 let haySonido = false;
 let antesHabiaSonido = false; // memoria del estado de "haySonido" un fotograma atrás
 
@@ -72,13 +74,18 @@ function setup() {
   imagen = loadImage("imagenes/cuadrorojo.jpg");
 
 
- 
-
 
 
     //----MICROFONO-----
     mic = new p5.AudioIn(); // objeto que se comunica con la enrada de micrófono
     mic.start(); // se inicia el flujo de audio
+
+
+    
+   // Crear un objeto FFT para el análisis de frecuencia
+   fft = new p5.FFT();
+   fft.setInput(mic);
+
 
       //----GESTOR----
   gestorAmp = new GestorSenial(AMP_MIN, AMP_MAX); // inicilizo en goestor con los umbrales mínimo y máximo de la señal
@@ -175,15 +182,24 @@ function draw() {
 
    tam = map(amp ,AMP_MIN , 3, AMP_MIN,5); //mapea el valor minimo de amplitud y el maximo para modificar el tamaño
 
-   let frecuencia= 15; //para que se dibuje mas rapido o lento
+   let velocudad= 10; //para que se dibuje mas rapido o lento
   
-    
+   
+     // Obtener el espectro de frecuencias
+  let spectrum = fft.analyze();
 
+    // Calcular la frecuencia dominante (pitch)
+    let pitch = findPitch(spectrum);
   
           
-    
+    let freq = fft.getCentroid();
+
+    console.log(freq/350);
+  
+
 
 if(haySonido){  // ESTADO    
+
 
       if(pantallas === 0){
         opacidad=0;
@@ -207,10 +223,10 @@ if(haySonido){  // ESTADO
       }
 
 
-      if(pantallas === 1){  
+      if(pantallas === 1 && freq/350 <= 21){  
         //CUANDO SE LLENE LA PANTALLA DE MANCHAS SE PASA AL SIGUIENTE ESTADO
 
-        if(frameCount%frecuencia==0){
+        if(frameCount%velocudad==0){
 
           if (contador < 15 ) {
           
@@ -253,8 +269,8 @@ if(haySonido){  // ESTADO
      
 
     if(pantallas === 2){
-      if(frameCount%frecuencia==0){
-          if (contador < 35 ) {
+      if(frameCount%velocudad==0){
+          if (contador < 35 && haySonido ) {
           
               let cua = int(random(cantidad));
               let x = random(width);
@@ -291,8 +307,8 @@ if(haySonido){  // ESTADO
 
 
       if(pantallas === 3){
-      if(frameCount%frecuencia==0){
-        if (contador < 60 ) {
+      if(frameCount%velocudad==0){
+        if (contador < 60 && haySonido) {
           let cua = int(random(cantidad));
           let x = random(width);
           let y = random(height);
@@ -327,8 +343,8 @@ if(haySonido){  // ESTADO
       }
 
       if(pantallas === 4){
-        if(frameCount%frecuencia==0){
-        if (contador < 80 ) {
+        if(frameCount%velocudad==0){
+        if (contador < 80 && haySonido) {
           let cua = int(random(cantidad));
           let x = random(width);
           let y = random(height);
@@ -361,55 +377,70 @@ if(haySonido){  // ESTADO
       }
 
        if(pantallas === 5){
-        if(frameCount%frecuencia==0){
-        if (contador < 100 ) {
+        if(frameCount%velocudad==0){
+        if (contador < 100 && haySonido) {
             push();
-            translate(0,0)
+            translate(width/2,height/2)
             scale(1);
-            image(lineasCuadro,width/2,height/2)
+            image(lineasCuadro,0,0)
             pop();
           contador++;
         }
       }
       }
 
-      if (contador >= 100) {
+      if (freq/350 >= 21) {
         background(255,opacidad);
         opacidad++;
-
       }
 
-       if(opacidad >= 255){
+       if(opacidad >= 20){
         pantallas = 0;
       }
        
     
 
-    
-
-
-
-
-
-
-  function contarImagenesCercanas(x, y) {
-    let contador = 0;
-    for (let i = 0; i < coordenadas.length; i++) {
-      let distancia = dist(x, y, coordenadas[i].x, coordenadas[i].y);
-      if (distancia < 20) { // Define un umbral de distancia adecuado
-        contador++;
+function contarImagenesCercanas(x, y) {
+  let contador = 0;
+  for (let i = 0; i < coordenadas.length; i++) {
+  let distancia = dist(x, y, coordenadas[i].x, coordenadas[i].y);
+  if (distancia < 20) { // Define un umbral de distancia adecuado
+    contador++;
+  }
+  }
+  return contador;
+  }
+  
+  
+  function calcularDensidadDeseada(x, y) {
+  let distanciaCentro = dist(x, y, width / 2, height / 2);
+  let densidadDeseada = map(distanciaCentro, 0, dist(0, 0, width / 2, height / 2), 4, 6);
+  return densidadDeseada;
+  }
+  
+  function findPitch(spectrum) {
+    let nyquist = sampleRate() / 2;
+    let maxAmp = 0;
+    let maxIndex = -1;
+  
+    // Encontrar el índice con la amplitud más alta en el espectro
+    for (let i = 0; i < spectrum.length; i++) {
+      if (spectrum[i] > maxAmp) {
+        maxAmp = spectrum[i];
+        maxIndex = i;
       }
     }
-    return contador;
+    
+    // Convertir el índice a frecuencia
+    let freq = (maxIndex * nyquist) / spectrum.length;
+    return freq;
   }
-
-
-  function calcularDensidadDeseada(x, y) {
-    let distanciaCentro = dist(x, y, width / 2, height / 2);
-    let densidadDeseada = map(distanciaCentro, 0, dist(0, 0, width / 2, height / 2), 4, 6);
-    return densidadDeseada;
-  }
+  
+    
 }
+
+
+
 
 
 
