@@ -389,7 +389,7 @@ if(haySonido){  // ESTADO
       }
       }
 
-      if (freq/350 >= 12) {
+      if (freq/350 >= 20) {
         background(255,opacidad);
         opacidad++;
       }
